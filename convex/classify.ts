@@ -122,13 +122,26 @@ const BACKOFF_DELAYS = [2000, 4000, 8000];
 export const classifyBatch = internalAction({
   args: {},
   handler: async (ctx) => {
-    // Read GEMINI_API_KEY from Convex environment variables
+    // Read config from Convex environment variables
+    // Supports Vertex AI (GCP_PROJECT_ID + GCP_REGION + GCP_SERVICE_ACCOUNT_KEY)
+    // or AI Studio (GEMINI_API_KEY)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const apiKey = (globalThis as any).process?.env?.GEMINI_API_KEY as string | undefined;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY not set in Convex environment variables");
+    const env = (globalThis as any).process?.env ?? {};
+    const projectId = env.GCP_PROJECT_ID as string | undefined;
+    const region = env.GCP_REGION as string | undefined;
+    const serviceAccountKey = env.GCP_SERVICE_ACCOUNT_KEY as string | undefined;
+    const apiKey = env.GEMINI_API_KEY as string | undefined;
+
+    const useVertex = !!(projectId && region && serviceAccountKey);
+
+    if (!useVertex && !apiKey) {
+      console.error("No Gemini config found. Set either GCP_PROJECT_ID+GCP_REGION+GCP_SERVICE_ACCOUNT_KEY (Vertex AI) or GEMINI_API_KEY (AI Studio)");
       return;
     }
+
+    const geminiConfig = useVertex
+      ? { mode: "vertex" as const, projectId, region, serviceAccountKey }
+      : { mode: "aistudio" as const, apiKey };
 
     // Fetch batch of pending posts
     const posts = await ctx.runQuery(internal.classify.fetchPendingBatch);
@@ -165,7 +178,7 @@ export const classifyBatch = internalAction({
             await sleep(GEMINI_CALL_DELAY_MS);
           }
 
-          const result = await classifyPost(post.content, post.platform, apiKey);
+          const result = await classifyPost(post.content, post.platform, geminiConfig);
           geminiCallCount++;
 
           // Determine status based on confidence threshold
