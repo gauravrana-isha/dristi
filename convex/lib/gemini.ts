@@ -1,9 +1,7 @@
 // Gemini Flash 2.0 API client for post classification
 
-import {
-  ClassificationResult,
-  deserializeClassificationResult,
-} from "./schemas";
+import type { ClassificationResult } from "./schemas";
+import { deserializeClassificationResult } from "./schemas";
 
 /** Gemini Flash 2.0 REST API endpoint */
 export const GEMINI_API_URL =

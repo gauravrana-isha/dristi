@@ -123,7 +123,8 @@ export const classifyBatch = internalAction({
   args: {},
   handler: async (ctx) => {
     // Read GEMINI_API_KEY from Convex environment variables
-    const apiKey = process.env.GEMINI_API_KEY;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const apiKey = (globalThis as any).process?.env?.GEMINI_API_KEY as string | undefined;
     if (!apiKey) {
       console.error("GEMINI_API_KEY not set in Convex environment variables");
       return;
