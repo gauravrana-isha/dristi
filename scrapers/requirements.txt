@@ -1,0 +1,7 @@
+ntscraper
+google-api-python-client
+feedparser
+requests
+apify-client
+hypothesis
+pytest
