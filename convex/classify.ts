@@ -97,11 +97,59 @@ export const logClassificationError = internalMutation({
   },
 });
 
+/** Reset all classification_failed posts back to pending so they can be retried */
+export const retryFailedPosts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const failed = await ctx.db
+      .query("posts")
+      .withIndex("by_status", (q) => q.eq("status", "classification_failed"))
+      .collect();
+    for (const post of failed) {
+      await ctx.db.patch(post._id, { status: "pending_classification" });
+    }
+    return { reset: failed.length };
+  },
+});
 
 // --- Main classification action ---
 
 /** Minimum delay between Gemini API calls (ms) — respects 15 req/min rate limit */
 const GEMINI_CALL_DELAY_MS = 4000;
+
+/** Debug action: test Gemini connection with a simple prompt */
+export const testGeminiConnection = internalAction({
+  args: {},
+  handler: async (_ctx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const env = (globalThis as any).process?.env ?? {};
+    const projectId = env.GCP_PROJECT_ID;
+    const region = env.GCP_REGION;
+    const serviceAccountKey = env.GCP_SERVICE_ACCOUNT_KEY;
+    const apiKey = env.GEMINI_API_KEY;
+
+    console.log(`GCP_PROJECT_ID: ${projectId ? "SET" : "NOT SET"}`);
+    console.log(`GCP_REGION: ${region ? "SET" : "NOT SET"}`);
+    console.log(`GCP_SERVICE_ACCOUNT_KEY: ${serviceAccountKey ? "SET (" + serviceAccountKey.length + " chars)" : "NOT SET"}`);
+    console.log(`GEMINI_API_KEY: ${apiKey ? "SET" : "NOT SET"}`);
+
+    try {
+      const result = await classifyPost(
+        "Sadhguru is a fraud and a cult leader",
+        "twitter",
+        projectId && region && serviceAccountKey
+          ? { mode: "vertex", projectId, region, serviceAccountKey }
+          : { mode: "aistudio", apiKey }
+      );
+      console.log("SUCCESS:", JSON.stringify(result));
+      return result;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("FAILED:", msg);
+      return { error: msg };
+    }
+  },
+});
 
 /** Max retry attempts for Gemini API errors */
 const MAX_RETRIES = 3;
@@ -170,6 +218,7 @@ export const classifyBatch = internalAction({
 
       // Stage 2: Gemini Flash 2.0 classification with retry logic
       let classified = false;
+      let lastError = "unknown";
 
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
@@ -203,10 +252,10 @@ export const classifyBatch = internalAction({
           classified = true;
           break;
         } catch (error) {
-          const errorMessage =
+          lastError =
             error instanceof Error ? error.message : String(error);
           console.error(
-            `Post ${post._id}: Gemini error (attempt ${attempt + 1}/${MAX_RETRIES}): ${errorMessage}`
+            `Post ${post._id}: Gemini error (attempt ${attempt + 1}/${MAX_RETRIES}): ${lastError}`
           );
 
           // Apply exponential backoff before retry
@@ -225,7 +274,7 @@ export const classifyBatch = internalAction({
         await ctx.runMutation(internal.classify.logClassificationError, {
           platform: post.platform,
           error_type: "classification_failed",
-          error_message: `All ${MAX_RETRIES} Gemini classification attempts failed for post ${post._id}`,
+          error_message: `Gemini error: ${lastError}`,
           context: { postId: post._id, source_url: post.source_url },
           timestamp: Date.now(),
         });

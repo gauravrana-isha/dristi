@@ -44,7 +44,7 @@ async function getAccessToken(serviceAccountKey: string): Promise<string> {
   const header = { alg: "RS256", typ: "JWT" };
   const claimSet = {
     iss: key.client_email,
-    scope: "https://www.googleapis.com/auth/cloud-platform",
+    scope: "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/generative-language",
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
@@ -118,7 +118,7 @@ export async function classifyPost(
 ): Promise<ClassificationResult> {
   const prompt = buildPrompt(content, platform);
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -130,7 +130,7 @@ export async function classifyPost(
     }
 
     const accessToken = await getAccessToken(config.serviceAccountKey);
-    const url = `https://${config.region}-aiplatform.googleapis.com/v1/projects/${config.projectId}/locations/${config.region}/publishers/google/models/gemini-2.0-flash:generateContent`;
+    const url = `https://${config.region}-aiplatform.googleapis.com/v1/projects/${config.projectId}/locations/${config.region}/publishers/google/models/gemini-2.5-flash:generateContent`;
 
     response = await fetch(url, {
       method: "POST",
@@ -145,7 +145,7 @@ export async function classifyPost(
       throw new Error("AI Studio mode requires GEMINI_API_KEY");
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${config.apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${config.apiKey}`;
     response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
