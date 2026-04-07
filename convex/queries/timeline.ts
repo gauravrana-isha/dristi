@@ -22,7 +22,7 @@ function formatDate(date: Date): string {
 
 export const getTimelineSeries = query({
   args: {
-    category: v.optional(v.union(v.literal("hate"), v.literal("misinfo"))),
+    category: v.optional(v.union(v.literal("hate"), v.literal("misinfo"), v.literal("neutral"), v.literal("positive"))),
     granularity: v.optional(v.union(v.literal("day"), v.literal("week"))),
   },
   handler: async (ctx, args) => {

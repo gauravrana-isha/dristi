@@ -2,10 +2,10 @@
 
 // --- Constants ---
 
-export const VALID_CATEGORIES = ["hate", "misinfo"] as const;
+export const VALID_CATEGORIES = ["hate", "misinfo", "neutral", "positive"] as const;
 export type Category = (typeof VALID_CATEGORIES)[number];
 
-export const VALID_SEVERITIES = ["low", "medium", "high", "critical"] as const;
+export const VALID_SEVERITIES = ["none", "low", "medium", "high", "critical"] as const;
 export type Severity = (typeof VALID_SEVERITIES)[number];
 
 export const VALID_PLATFORMS = ["twitter", "youtube", "instagram", "news"] as const;

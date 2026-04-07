@@ -49,8 +49,9 @@ export const updatePostClassification = internalMutation({
   args: {
     postId: v.id("posts"),
     status: v.union(v.literal("classified"), v.literal("low_confidence")),
-    category: v.union(v.literal("hate"), v.literal("misinfo")),
+    category: v.union(v.literal("hate"), v.literal("misinfo"), v.literal("neutral"), v.literal("positive")),
     severity: v.union(
+      v.literal("none"),
       v.literal("low"),
       v.literal("medium"),
       v.literal("high"),
@@ -109,6 +110,34 @@ export const retryFailedPosts = internalMutation({
       await ctx.db.patch(post._id, { status: "pending_classification" });
     }
     return { reset: failed.length };
+  },
+});
+
+/** Reset ALL classified posts back to pending for re-classification */
+export const resetAllClassified = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const classified = await ctx.db
+      .query("posts")
+      .withIndex("by_status", (q) => q.eq("status", "classified"))
+      .collect();
+    const lowConf = await ctx.db
+      .query("posts")
+      .withIndex("by_status", (q) => q.eq("status", "low_confidence"))
+      .collect();
+    const all = [...classified, ...lowConf];
+    for (const post of all) {
+      await ctx.db.patch(post._id, {
+        status: "pending_classification",
+        category: undefined,
+        severity: undefined,
+        themes: undefined,
+        confidence: undefined,
+        reasoning: undefined,
+        classified_at: undefined,
+      });
+    }
+    return { reset: all.length };
   },
 });
 

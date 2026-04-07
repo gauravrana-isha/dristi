@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export const getPostsByCategory = query({
   args: {
-    category: v.optional(v.union(v.literal("hate"), v.literal("misinfo"))),
+    category: v.optional(v.union(v.literal("hate"), v.literal("misinfo"), v.literal("neutral"), v.literal("positive"))),
     severity: v.optional(
       v.union(
         v.literal("low"),

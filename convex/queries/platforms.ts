@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export const getPlatformBreakdown = query({
   args: {
-    category: v.optional(v.union(v.literal("hate"), v.literal("misinfo"))),
+    category: v.optional(v.union(v.literal("hate"), v.literal("misinfo"), v.literal("neutral"), v.literal("positive"))),
   },
   handler: async (ctx, args) => {
     // Fetch classified posts, optionally filtered by category

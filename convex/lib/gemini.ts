@@ -10,22 +10,35 @@ import { deserializeClassificationResult } from "./schemas";
 function buildPrompt(content: string, platform: string): string {
   return `You are a content analyst reviewing online posts about Sadhguru (Jaggi Vasudev) and the Isha Foundation.
 
+Your job is to determine if a post contains hate speech or misinformation. Most posts will be neutral or positive — only flag posts that genuinely contain harmful content.
+
 Classify the following post strictly as JSON with no other text:
 
 Post: "${content}"
 Platform: "${platform}"
 
 {
-  "category": "hate" | "misinfo",
-  "severity": "low" | "medium" | "high" | "critical",
-  "themes": ["theme1", "theme2"],
+  "category": "hate" | "misinfo" | "neutral" | "positive",
+  "severity": "none" | "low" | "medium" | "high" | "critical",
+  "themes": ["theme1"],
   "confidence": 0.0-1.0,
   "reasoning": "one sentence"
 }
 
-Valid themes: personal_attack, slur, cult_allegation, health_misinfo, legal_allegations, financial_fraud, coordinated_amplification, satire, criticism, other
+Category rules:
+- "positive": supportive, appreciative, or promotional content about Sadhguru/Isha
+- "neutral": factual reporting, balanced discussion, or unrelated mentions
+- "hate": coordinated personal attacks, slurs, dehumanising content, targeted abuse
+- "misinfo": false or misleading claims — fabricated health allegations, cult narratives, fraud accusations, smear campaigns
 
-Severity scale:
+IMPORTANT: If the post is positive or neutral, classify it as such. Do NOT force everything into hate or misinfo. Only use hate/misinfo for genuinely harmful content.
+
+For neutral/positive posts, set severity to "none" and themes to ["other"].
+
+Valid themes (for hate/misinfo only): personal_attack, slur, cult_allegation, health_misinfo, legal_allegations, financial_fraud, coordinated_amplification, satire, criticism, other
+
+Severity scale (for hate/misinfo only):
+- none: neutral or positive content
 - low: mild negative opinion
 - medium: personal criticism
 - high: false factual claim or targeted attack
